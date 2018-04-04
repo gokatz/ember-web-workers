@@ -1,13 +1,17 @@
-import Ember from 'ember';
-
-const { get, assert, A, RSVP, Evented, computed, Service, on, isPresent } = Ember;
+import { assert } from '@ember/debug';
+import { A } from '@ember/array';
+import RSVP from 'rsvp';
+import { computed, get } from '@ember/object';
+import Service from '@ember/service';
+import Evented, { on } from '@ember/object/evented';
+import { isPresent } from '@ember/utils';
 
 function messageListener(meta, event) {
-  const ping = event.data === true;
+  let ping = event.data === true;
   // Check if the worker has been instantiated via event listener:
   // worker.on('name', data, callback);
   if (get(meta, 'keepAlive')) {
-    const callback = get(meta, 'callback');
+    let callback = get(meta, 'callback');
 
     if (ping) {
       // A 'true' message tell us that the worker has been created correctly,
@@ -35,13 +39,13 @@ function errorListener(meta, error) {
 
 export default Service.extend(Evented, {
 
-	/**
+  /**
 	 * Check if workers are enabled.
 	 *
 	 * @property isEnabled
 	 * @type Boolean
 	 */
-	isEnabled: computed(() => Boolean(window.Worker)),
+  isEnabled: computed(() => Boolean(window.Worker)),
 
   /**
 	 * Static workers file path.
@@ -49,15 +53,15 @@ export default Service.extend(Evented, {
 	 * @property webWorkersPath
 	 * @type String
 	 */
-	webWorkersPath: 'assets/web-workers/',
+  webWorkersPath: 'assets/web-workers/',
 
   /**
 	 * Initialize metadata array.
 	 *
 	 * @method init
 	 */
-	init() {
-	  this._super(...arguments);
+  init() {
+    this._super(...arguments);
     // Initialize metadata array, it will store all running workers with their own promises/callbacks.
     this.set('_cache', A([]));
   },
@@ -70,13 +74,13 @@ export default Service.extend(Evented, {
    * @param Function callback
    * @return Object
 	 */
-	_wakeUp(name, callback, keepAlive = false) {
+  _wakeUp(name, callback, keepAlive = false) {
     assert('You must provide the worker name', isPresent(name));
 
     // 'keepAlive' will store if the worker should still alive after sending a message.
-    const worker = new window.Worker(`${this.get('webWorkersPath')}${name}.js`);
-		const deferred = RSVP.defer('Worker: sending message');
-    const meta = {
+    let worker = new window.Worker(`${this.get('webWorkersPath')}${name}.js`);
+    let deferred = RSVP.defer('Worker: sending message');
+    let meta = {
       keepAlive,
       worker,
       name,
@@ -89,7 +93,7 @@ export default Service.extend(Evented, {
     worker.addEventListener('error', errorListener.bind(this, meta));
 
     return meta;
-	},
+  },
 
   /**
 	 * Resolve pending promise.
@@ -97,14 +101,14 @@ export default Service.extend(Evented, {
 	 * @method _onResolve
    * @param Object data
 	 */
-	_onResolve: on('resolve', function(meta, data) {
-    const deferred = get(meta, 'deferred');
+  _onResolve: on('resolve', function(meta, data) {
+    let deferred = get(meta, 'deferred');
 
     if (!get(meta, 'keepAlive')) {
-			this._cleanMeta(meta);
+      this._cleanMeta(meta);
     }
     deferred.resolve(data);
-	}),
+  }),
 
   /**
 	 * Reject pending promise.
@@ -115,7 +119,7 @@ export default Service.extend(Evented, {
   _onReject: on('reject', function(meta, error) {
     this._cleanMeta(meta);
     get(meta, 'deferred').reject(error);
-	}),
+  }),
 
   /**
 	 * Clean request metadata & kill worker if neccessary.
@@ -126,7 +130,7 @@ export default Service.extend(Evented, {
   _cleanMeta(meta) {
     this._sleep(get(meta, 'worker'));
     this.get('_cache').removeObject(meta);
-	},
+  },
 
   /**
 	 * Kill worker.
@@ -135,8 +139,8 @@ export default Service.extend(Evented, {
    * @param Worker worker
 	 */
   _sleep(worker) {
-		worker.terminate();
-	},
+    worker.terminate();
+  },
 
   /**
 	 * Cancel pending promise.
@@ -145,22 +149,22 @@ export default Service.extend(Evented, {
    * @param Ember.RSVP promise
    */
   terminate(promise) {
-		const _cache = this.get('_cache');
+    let _cache = this.get('_cache');
     let index = _cache.length;
 
     // Reverse loop to prevent errors (this loop iterates a collection while deletes its items)
-		while(index--){
-      const meta = _cache[index];
-			const deferred = get(meta, `deferred`);
+    while (index--) {
+      let meta = _cache[index];
+      let deferred = get(meta, 'deferred');
 
       // If promise exists reject it, if not reject all.
       if ((deferred.promise === promise) || !promise) {
         this.trigger('reject', meta);
       }
-		}
-	},
+    }
+  },
 
-	/**
+  /**
 	 * Send event to the worker and terminate it when responses.
 	 *
 	 * @method postMessage
@@ -168,18 +172,18 @@ export default Service.extend(Evented, {
    * @param Object data
 	 * @return Mixed
 	 */
-	postMessage(name, data) {
-		assert('Workers are disabled', this.get('isEnabled'));
+  postMessage(name, data) {
+    assert('Workers are disabled', this.get('isEnabled'));
 
-    const meta = this._wakeUp(name);
+    let meta = this._wakeUp(name);
 
     this.get('_cache').pushObject(meta);
-		get(meta, 'worker').postMessage(data);
+    get(meta, 'worker').postMessage(data);
 
-		return get(meta, 'deferred.promise');
-	},
+    return get(meta, 'deferred.promise');
+  },
 
-	/**
+  /**
 	 * Suscribe to a worker.
 	 *
 	 * @method on
@@ -190,14 +194,14 @@ export default Service.extend(Evented, {
   on(name, callback) {
     assert('Cannot register an event with no callback', typeof callback === 'function');
 
-    const meta = this._wakeUp(name, callback, true);
+    let meta = this._wakeUp(name, callback, true);
 
     this.get('_cache').pushObject(meta);
 
-		return get(meta, 'deferred.promise');
+    return get(meta, 'deferred.promise');
   },
 
-	/**
+  /**
 	 * Suscribe to a worker.
 	 *
 	 * @method off
@@ -207,7 +211,7 @@ export default Service.extend(Evented, {
   off(name, callback) {
     assert('Cannot unregister an event with no callback', typeof callback === 'function');
 
-    const meta = this.get('_cache').find((meta) => ( name === meta.name && callback === meta.callback ));
+    let meta = this.get('_cache').find((meta) => (name === meta.name && callback === meta.callback));
 
     if (meta) {
       this._cleanMeta(meta);
@@ -218,18 +222,18 @@ export default Service.extend(Evented, {
     return RSVP.reject('Worker: event does not exist');
   },
 
-	/**
+  /**
 	 * Start a worker.
 	 *
 	 * @method open
    * @param String name
 	 */
   open(name) {
-    const meta = this._wakeUp(name, null, true);
-    const promise = get(meta, 'deferred.promise').then(() => ({
+    let meta = this._wakeUp(name, null, true);
+    let promise = get(meta, 'deferred.promise').then(() => ({
       postMessage: (data) => {
-        const deferred = RSVP.defer();
-        const channel = new MessageChannel();
+        let deferred = RSVP.defer();
+        let channel = new MessageChannel();
 
         channel.port2.onmessage = (e) => deferred.resolve(e.data);
         get(meta, 'worker').postMessage(data, [channel.port1]);
@@ -244,7 +248,7 @@ export default Service.extend(Evented, {
 
     this.get('_cache').pushObject(meta);
 
-		return promise;
+    return promise;
   }
 
 });

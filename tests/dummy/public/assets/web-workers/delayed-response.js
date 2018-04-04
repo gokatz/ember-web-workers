@@ -1,5 +1,5 @@
 self.addEventListener('message', function(e) {
-  var data = e.data;
+  let data = e.data;
 
   setTimeout(function() {
     postMessage(data);
