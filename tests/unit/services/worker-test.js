@@ -1,34 +1,30 @@
 /* eslint-disable func-style, no-magic-numbers, prefer-const */
-import Ember from 'ember';
-import { moduleFor, test } from 'ember-qunit';
-// import sinon from 'sinon';" Start interactive EasyAlign in visual mode (e.g. vip
-// )
-//
+import { hash } from 'rsvp';
 
-const { RSVP: { hash } } = Ember;
+import { moduleFor, test } from 'ember-qunit';
 // const DELAY = 50;
 let service;
-const Worker = window.Worker;
+const { Worker } = window;
 const testData = { foo: 'foo' };
 
 moduleFor('service:worker', 'Unit | Service | worker', {
-	beforeEach() {
-		service = this.subject({
+  beforeEach() {
+    service = this.subject({
       webWorkersPath: '../assets/web-workers/'
     });
-	},
+  },
   afterEach() {
     service.terminate();
   }
 });
 
 test('it exists', (assert) => {
-	assert.ok(service, 'service exists');
+  assert.ok(service, 'service exists');
 });
 
 test('its enabled if worker exists', (assert) => {
-	assert.equal(service.get('isEnabled'), Boolean(Worker));
-	assert.equal(service.get('_cache.length'), 0);
+  assert.equal(service.get('isEnabled'), Boolean(Worker));
+  assert.equal(service.get('_cache.length'), 0);
 });
 
 test('it rejects promise if worker does not exist', (assert) => {
@@ -62,8 +58,8 @@ test('it rejects promise if worker throws an error', (assert) => {
 test('it resolves simultaneous requests', (assert) => {
   assert.expect(4);
 
-  const delayedPromise = service.postMessage('delayed-response', testData);
-  const promise = service.postMessage('response', testData).then((data) => {
+  let delayedPromise = service.postMessage('delayed-response', testData);
+  let promise = service.postMessage('response', testData).then((data) => {
     // Check pending delayed promise
     assert.equal(service.get('_cache.length'), 1);
 
@@ -78,8 +74,8 @@ test('it resolves simultaneous requests', (assert) => {
 });
 
 test('it can terminate a pending promise', (assert) => {
-  const done = assert.async();
-  const promise = service.postMessage('delayed-response');
+  let done = assert.async();
+  let promise = service.postMessage('delayed-response');
 
   promise.then(() => {
     assert.ok(0);
@@ -109,7 +105,7 @@ test('it resolves promise when event starts', (assert) => {
 });
 
 test('it subscribes to a worker', (assert) => {
-  const callback = () => {};
+  let callback = () => {};
 
   return service.on('subscription', callback).then(() => {
     assert.equal(service.get('_cache.length'), 1);
@@ -121,8 +117,8 @@ test('it executes callback when receives data', (assert) => {
   assert.expect(4);
 
   let count = 0;
-  const done = assert.async();
-  const callback = (data) => {
+  let done = assert.async();
+  let callback = (data) => {
     if (count >= 3) {
       service.off('subscription', callback);
       done();
@@ -140,7 +136,7 @@ test('it executes callback when receives data', (assert) => {
 test('it resolves promise when event stops', (assert) => {
   assert.expect(2);
 
-  const callback = () => {};
+  let callback = () => {};
 
   return service.on('subscription', callback).then(() => {
     assert.equal(service.get('_cache.length'), 1);
@@ -154,8 +150,8 @@ test('it resolves promise when event stops', (assert) => {
 test('it unsubscribes from a worker', (assert) => {
   assert.expect(2);
 
-  const callback = () => {};
-  const subscriptionPromise = service.on('subscription', callback);
+  let callback = () => {};
+  let subscriptionPromise = service.on('subscription', callback);
 
   assert.equal(service.get('_cache.length'), 1);
 
