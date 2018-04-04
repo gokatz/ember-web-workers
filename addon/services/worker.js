@@ -1,7 +1,7 @@
 import { assert } from '@ember/debug';
 import { A } from '@ember/array';
 import RSVP from 'rsvp';
-import { computed, get } from '@ember/object';
+import { get } from '@ember/object';
 import Service from '@ember/service';
 import Evented, { on } from '@ember/object/evented';
 import { isPresent } from '@ember/utils';
@@ -24,8 +24,8 @@ function messageListener(meta, event) {
       // Receiving data from a worker created via 'open'.
       this.trigger('resolve', meta, event.data);
     }
-  // If the response is equals to 'true' we should ignore it because
-  // the worker is pinging us to tell that everything is correct.
+    // If the response is equals to 'true' we should ignore it because
+    // the worker is pinging us to tell that everything is correct.
   } else if (!ping) {
     // Resolve the promise returned by the method 'postMessage' with the event data.
     this.trigger('resolve', meta, event.data);
@@ -45,7 +45,7 @@ export default Service.extend(Evented, {
 	 * @property isEnabled
 	 * @type Boolean
 	 */
-  isEnabled: computed(() => Boolean(window.Worker)),
+  isEnabled: Boolean(window.Worker),
 
   /**
 	 * Static workers file path.
@@ -78,7 +78,8 @@ export default Service.extend(Evented, {
     assert('You must provide the worker name', isPresent(name));
 
     // 'keepAlive' will store if the worker should still alive after sending a message.
-    let worker = new window.Worker(`${this.get('webWorkersPath')}${name}.js`);
+    // let worker = new window.Worker(`${this.get('webWorkersPath')}${name}.js`);
+    let worker = this.spawnWorker(`${this.get('webWorkersPath')}${name}.js`);
     let deferred = RSVP.defer('Worker: sending message');
     let meta = {
       keepAlive,
@@ -93,6 +94,16 @@ export default Service.extend(Evented, {
     worker.addEventListener('error', errorListener.bind(this, meta));
 
     return meta;
+  },
+
+  spawnWorker(workerPath) {
+    if (window.location.origin === (new URL(workerPath)).origin) {
+      return new window.Worker(workerPath);
+    }
+    let blob = new Blob([
+      `importScripts("${workerPath}")`
+    ]);
+    return new Worker(URL.createObjectURL(blob));
   },
 
   /**
@@ -116,7 +127,7 @@ export default Service.extend(Evented, {
 	 * @method _onReject
    * @param Object meta
 	 */
-  _onReject: on('reject', function(meta, error) {
+  _onReject: on('reject', function (meta, error) {
     this._cleanMeta(meta);
     get(meta, 'deferred').reject(error);
   }),
