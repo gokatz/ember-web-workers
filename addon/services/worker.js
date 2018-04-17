@@ -220,13 +220,19 @@ export default Service.extend(Evented, {
    * @param Function callback
 	 */
   off(name, callback) {
-    assert('Cannot unregister an event with no callback', typeof callback === 'function');
+    let meta;
+    if (callback) {
+      assert('Callback should be a function', typeof callback === 'function');
+      let matchingWorker = this.get('_cache').find((meta) => (name === meta.name && callback === meta.callback));
+      meta = matchingWorker ? [matchingWorker] : [];
+    } else {
+      meta = this.get('_cache').filter((meta) => name === meta.name);
+    }
 
-    let meta = this.get('_cache').find((meta) => (name === meta.name && callback === meta.callback));
-
-    if (meta) {
-      this._cleanMeta(meta);
-
+    if (meta.length) {
+      meta.forEach((workerData) => {
+        this._cleanMeta(workerData);
+      })
       return RSVP.resolve();
     }
 
